@@ -16,25 +16,55 @@ class tri_queue
 {
 private:
   std::mutex              d_mutex;
+  std::mutex              out_mutex;
   std::condition_variable d_condition;
   std::vector < std::deque<T>* >          queues;
+
+
+  std::vector <std::mutex *  >   mutex_a;
+  std::vector <std::condition_variable* > condition_a;
+
+  std::vector <int* > jobs_q;
   std::atomic<int> jobs_in;
   std::atomic<int> jobs_out;
 
   bool                    qend;
 
+  int priority[3];
+  std::mutex              in_mutex;
+
+
 public:
 
 
   tri_queue(std::string s) { std::cout << "Created " << s << " queue " << std::endl;  }
-  tri_queue(){this.tri_queue(1);}
-  tri_queue(int queue_number):qend(false),jobs_in(0),jobs_out(0) {
 
+  tri_queue(int queue_number,std::string prior):qend(false),jobs_in(0),jobs_out(0) {
 
-  //queues = new std::vector<std::deque<T>*> ();
 
       for (int i = 0; i < queue_number; ++i){
         queues.push_back( new std::deque<T>() );
+        mutex_a.push_back( new std::mutex());
+        condition_a.push_back( new std::condition_variable());
+        jobs_q.push_back(new int(0));
+      }
+      if(prior=="lms"){
+        priority[0] = 0;
+        priority[1] = 1;
+        priority[2] = 2;
+
+      }else if(prior == "sml"){
+        priority[0] = 2;
+        priority[1] = 1;
+        priority[2] = 0;
+      }else if(prior == "msl"){
+        priority[0] = 1;
+        priority[1] = 2;
+        priority[2] = 0;
+      }else{
+        priority[0] = 1;
+        priority[1] = 0;
+        priority[2] = 2;
       }
 
   }
@@ -42,6 +72,9 @@ public:
   void delete_sunqueue(){
     for (int i = 0; i < queues.size(); ++i){
         delete queues.at(i);
+        delete mutex_a.at(i);
+        delete condition_a.at(i);
+        delete jobs_q.at(i);
       }
   }
 
@@ -51,6 +84,13 @@ public:
   std::atomic<int>* get_jobs_in(){
     return &jobs_in;
   }
+
+  bool  end(){
+    std::unique_lock<std::mutex> lockx(this->in_mutex);
+
+    return ((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;}))&& jobs_out==0);
+  }
+
 
   void decrease_jobs_out(){
     jobs_out--;
@@ -71,47 +111,60 @@ public:
   }
 
   void push(T const& value,int queue_number) {
+
     {
-      std::unique_lock<std::mutex> lock(this->d_mutex);
-      queues[queue_number]->push_front(value);
-      jobs_in++;
+    std::unique_lock<std::mutex> lockx(this->in_mutex);
+
+    queues[queue_number]->push_front(value);
+    
+
+    *(jobs_q[queue_number])= *(jobs_q[queue_number])+1;
+
+      if(value->get_type()!=0) // we don't decrease the jobs out if there are load!
+        jobs_out--;
+
     }
     this->d_condition.notify_one();
   }
 
 
   T pop() {
-    std::unique_lock<std::mutex> lock(this->d_mutex);
 
+    int sieze_q =  queues.size();
+    int i;
+      {
+        std::unique_lock<std::mutex> lock(this->in_mutex);
 
-    if(jobs_in <= 0 && jobs_out <= 0){
+        this->d_condition.wait(lock, [=]{ return ( std::any_of(jobs_q.begin(), jobs_q.end(), [](const int*data){return *data!=0;}) ||
+                                                   ((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;})) && jobs_out==0) ); });
+
+        if((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;}))&& jobs_out==0){
             return EOS;
-    }else{
-
-      this->d_condition.wait(lock, [=]{ return jobs_in>=0; });
-
-      if(jobs_in<= 0 && jobs_out <=0)
-        return EOS;
-
-      for (int i = 0; i < queues.size(); ++i){
-
-        if(!this->queues[i]->empty()){
-          T rc(std::move(this->queues[i]->back()));
-          this->queues[i]->pop_back();
-          jobs_in--;
-          jobs_out++;
-
-          return rc;
-
         }
 
+       // for (i = 0; i <= sieze_q; ++i){
+        for(const int &i : priority){
+
+          //decrease the tooked jobs
+          if(*jobs_q[i]>0){
+            *jobs_q[i]=*jobs_q[i]-1;
+
+            // get the task 
+            T rc(std::move(this->queues[i]->back()));
+            this->queues[i]->pop_back();
+
+            //store are not jobs out that we have to waits
+            if(rc->get_type() !=2)
+              jobs_out++;
+            
+            return rc;
+          }
+        }
+
+
       }
-    }
-    std::cout <<"- jobs_out" <<jobs_out << " - jobs_in"<<jobs_in << "Something go wrong, queue all empty " << std::endl;
-    return (NULL);
-
+    return (EOS);
   }
-
 };
 
 

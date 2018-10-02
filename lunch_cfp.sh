@@ -1,8 +1,9 @@
 echo $1
 for ((j=1; j<=3; j++))
 do
-	for ((i=1; i<=128; i=i*2))
+	for ((i=1; i<=32; i=i+1))
 	do
-	    ./c_pipe_farm input mark.png output $i 10 $1
+	    ./c_pipe_farm data_128 mark.png output 1 $i $1
 	done
+echo
 done

@@ -228,90 +228,122 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 	while(true){
 
 		t = t_queue->pop();
+
+
+
+
 	  	if(t == EOS) {   
-	  				std::cout << "EOS" << std::endl;
-     
-	  	  return;                               
+	  		//std::cout << "EOS" << std::endl;
+	  		return;                               
 	  	} 
-		if(t->get_type()==0){
 
-			std::cout << "loading " <<t->get_name() << std::endl;
+		//std::cout << "2*"<<t<<std::endl;
 
-		    char * name_img = new char[strlen(t->get_name())+1]();
+		switch(t->get_type())
+			{
+			case 0: {
+				//auto start   = std::chrono::high_resolution_clock::now();
 
-		   	strcpy(name_img,t->get_name());
+				//std::cout << "loading " << std::this_thread::get_id() << std::endl;
 
-		    std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
+				char * name_img = new char[strlen(t->get_name())+1]();
 
-			CImg<float>* loaded_img = new CImg<float>(t->get_name());
-			
-			free( t->get_name());
-			delete t;
+				strcpy(name_img,t->get_name());
+
+				std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
+
+				//auto startx   = std::chrono::high_resolution_clock::now();
+
+				CImg<float>* loaded_img;
+				for (int i=0; i<10;i++){
+
+					try{
+						loaded_img = new CImg<float>(name_img);
+						i=10;
+					} catch (...) {
+						std::cout<<"CImg libary exception captured" <<std::endl;
+
+					}	
+				}
+				
 
 
-			//array containing split range for each task
-			std::vector<std::pair<int,int>>* rf = my_split_n(img_mark,split_degree);
 
-			//creating each task and add to the queue
-			for(int i=0;i<split_degree;i++){
-
-				task * t_new = new task(loaded_img,img_mark,name_img,&rf[0][i].first,&rf[0][i].second,block_to_do,rf);
-				t_queue->push(t_new,1);
-				t_queue->decrease_jobs_out();
-
-			}
-
-		}else if (t->get_type() == 1){
+				//auto elapsedx = std::chrono::high_resolution_clock::now() - startx;
+				//auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+				//std::cout<<std::this_thread::get_id()<<" real load "<< msecx <<std::endl;
 
 
-		  	//task containing both the pointer to the image and the mark
-			std::cout << "marking" <<t->get_name() << std::endl;
+				free( t->get_name());
 
-		  	fuse_task_block( t );
+				delete t;
 
-			std::atomic<int> *block_to_do =	t->get_atom();
 
-		  	// decrease the number of pices to computer for the image
-			// if is 0 means that all the image was computed so it can be stored in memory
-			if( --(*block_to_do) == 0){ 
-				t->set_type(2);
-				t_queue->push(t,2);
-				t_queue->decrease_jobs_out();
+				//array containing split range for each task
+				std::vector<std::pair<int,int>>* rf = my_split_n(img_mark,split_degree);
 
-				delete t->get_v();
+				//creating each task and add to the queue
+				for(int i=0;i<split_degree;i++){
 
-			}else {
+					task * t_new = new task(loaded_img,img_mark,name_img,&rf[0][i].first,&rf[0][i].second,block_to_do,rf);
+					t_queue->push(t_new,0);
+
+				}
+
+				//auto elapsed = std::chrono::high_resolution_clock::now() - start;
+				//auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+				//std::cerr<<std::this_thread::get_id()<<" for task "<< msec <<std::endl;    
+			}break;
+			case 1: {
+				//task containing both the pointer to the image and the mark
+				//std::cout << "				marking" <<std::this_thread::get_id()<<std::endl;
+
+					fuse_task_block( t );
+
+				std::atomic<int> *block_to_do =	t->get_atom();
+
+					// decrease the number of pices to computer for the image
+				// if is 0 means that all the image was computed so it can be stored in memory
+				if( --(*block_to_do) == 0){ 
+					t->set_type(2);
+					t_queue->push(t,1);
+					delete t->get_v();
+				}else {
+					delete  t;
+				}    
+				}break;
+			case 2: {
+				//std::cout << "							saving "<<std::this_thread::get_id() << std::endl;
+
+				//merge the name of the image and the path of the output floder
+				char * folder_n = new char[strlen(folder_out)+strlen(t->get_name())]();
+					strcpy(folder_n,folder_out);
+					strcat(folder_n,basename(t->get_name()));
+
+				for (int i=0; i<10;i++){
+
+					try{
+						t->get_img()->save(folder_n);
+						i=10;
+					} catch (...) {
+						std::cout<<"CImg libary exception captured" <<std::endl;
+
+					}	
+				}
+				delete [] folder_n;
+
+				delete [] t->get_name();
+				delete t->get_img();
+				delete  t->get_atom();
 				delete  t;
+
+				//t_queue->decrease_jobs_out();
+
+				if(t_queue->end())
+					t_queue->notify_all_j();    
+			}break;
+				default:{std::cout << "something go wrong" << std::endl;}
 			}
-
-		}else if (t->get_type() == 2){
-
-			std::cout << "saving " <<t->get_name() << std::endl;
-
-		    //merge the name of the image and the path of the output floder
-		    char * folder_n = new char[strlen(folder_out)+strlen(t->get_name())]();
-		   	strcpy(folder_n,folder_out);
-		   	strcat(folder_n,basename(t->get_name()));
-
-			t->get_img()->save(folder_n);
-
-			delete [] folder_n;
-
-			delete [] t->get_name();
-			delete t->get_img();
-			delete  t->get_atom();
-			delete  t;
-
-			t_queue->decrease_jobs_out();
-
-			if(*t_queue->get_jobs_out() == 0 && *t_queue->get_jobs_in() ==0)
-				t_queue->notify_all_j();
-
-		}else{
-
-			std::cout << "something go wrong" << std::endl;
-			return;
-		}
 
 	}
 
@@ -345,13 +377,12 @@ int main(int argc, char * argv[]) {
 
 	// TO DELETE IS OLD
 	queue<char *> * img_names = new queue<char *>;
-/*
-	//make a queue with the name of the image to load
-	for(auto& p: std::experimental::filesystem::directory_iterator(argv[1])){
-		img_names->push(strdup( p.path().string().c_str()));
-	}*/
 
-	// testing ----
+	//make a queue with the name of the image to load
+	for(auto& p: std::experimental::filesystem::directory_iterator(argv[1]))
+		img_names->push(strdup( p.path().string().c_str()));
+	
+
 
 	tri_queue<task*> * t_queue = new tri_queue<task*>(3);
 
@@ -360,7 +391,6 @@ int main(int argc, char * argv[]) {
 		task * t = new task(strdup( p.path().string().c_str()));
 		t_queue->push(t,0);
 	}
-	// ----------++++
 
 
 
@@ -550,7 +580,6 @@ int main(int argc, char * argv[]) {
 		std::vector< std::thread> th_worker;
 
 
-	  	// create farms of threads for each stage
 
 	    th_worker.reserve (parallel_degree); // Reserve memory not to allocate 
 	    for (int i = 0; i < parallel_degree; ++i)
@@ -565,12 +594,17 @@ int main(int argc, char * argv[]) {
 		t_queue->delete_sunqueue();
 
 		delete t_queue;
+		auto elapsed = std::chrono::high_resolution_clock::now() - start;
+  		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
+		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
+
 
 	}
 	delete mark;
-		delete img_names;
+	delete img_names;
 
 
 
   return(0); 
-}
+	}
