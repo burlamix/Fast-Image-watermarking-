@@ -151,16 +151,16 @@ int main(int argc, char * argv[]) {
 			th_store.push_back(std::unique_ptr<ff_node_t<task,int>> (make_unique<store_node>(folder_out)));
 
 
-		ff_Farm<int> farm_load(std::move(th_load));
-	    ff_Farm<int> farm_mark(std::move(th_mark));
-	    ff_Farm<int> farm_store(std::move(th_store));
+		ff_Farm<> farm_load(std::move(th_load));
+	    ff_Farm<> farm_mark(std::move(th_mark));
+	    ff_Farm<> farm_store(std::move(th_store));
 
 	    //remove collector since the store are indipendently and there is no result to merge
 		farm_store.remove_collector();
 	    
 	    getfile_name_node  generator_name(folder_in);
 
-		ff_Pipe<int> pipe(generator_name,farm_load,farm_mark,farm_store);
+		ff_Pipe<> pipe(generator_name,farm_load,farm_mark,farm_store);
 
 		pipe.run_and_wait_end();
 
@@ -171,16 +171,16 @@ int main(int argc, char * argv[]) {
 
 		//create vector of pipeline
 		for(size_t i=0;i<parallel_degree;++i)
-			farm_o_pipe.push_back( make_unique<ff_Pipe<int>> 
+			farm_o_pipe.push_back( make_unique<ff_Pipe<>> 
 				(make_unique<load_node>(mark,split_degree),make_unique<mark_node>(),make_unique<store_node>(folder_out)));
 
-	    ff_Farm<int> farm_of_pipe(std::move(farm_o_pipe));
+	    ff_Farm<> farm_of_pipe(std::move(farm_o_pipe));
 		farm_of_pipe.remove_collector();
 
 	    getfile_name_node  generator_name(folder_in);
 
 	    //create pipeline with the name stream generator
-		ff_Pipe<int> pipe(generator_name,farm_of_pipe);
+		ff_Pipe<> pipe(generator_name,farm_of_pipe);
 
 		pipe.run_and_wait_end();
 

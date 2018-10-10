@@ -48,23 +48,50 @@ public:
         condition_a.push_back( new std::condition_variable());
         jobs_q.push_back(new int(0));
       }
+
+      /*
+
+      for (int i =0;i<3;i++){
+        switch(prior[i])      {
+          case "l": {
+              priority[0]=0;
+
+          }break;
+          case "m": {
+              priority[0]=1;
+            }break;
+          case "s": {
+              priority[0]=2;
+            }break;
+            default:{std::cout << "something go wrong" << std::endl;}
+          }
+       }
+*/
       if(prior=="lms"){
         priority[0] = 0;
         priority[1] = 1;
         priority[2] = 2;
 
-      }else if(prior == "sml"){
-        priority[0] = 2;
-        priority[1] = 1;
-        priority[2] = 0;
       }else if(prior == "msl"){
         priority[0] = 1;
         priority[1] = 2;
         priority[2] = 0;
-      }else{
+      }else if(prior == "slm"){
+        priority[0] = 2;
+        priority[1] = 1;
+        priority[2] = 0;
+      }else if(prior == "lsm"){
+        priority[0] = 0;
+        priority[1] = 2;
+        priority[2] = 1;
+      }else if(prior == "mls"){
         priority[0] = 1;
         priority[1] = 0;
         priority[2] = 2;
+      }else{        
+        priority[0] = 2;
+        priority[1] = 0;
+        priority[2] = 1;
       }
 
   }
@@ -87,12 +114,12 @@ public:
 
   bool  end(){
     std::unique_lock<std::mutex> lockx(this->in_mutex);
-
     return ((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;}))&& jobs_out==0);
   }
 
 
   void decrease_jobs_out(){
+    std::unique_lock<std::mutex> lockx(this->in_mutex);
     jobs_out--;
   }
 
@@ -116,7 +143,6 @@ public:
     std::unique_lock<std::mutex> lockx(this->in_mutex);
 
     queues[queue_number]->push_front(value);
-    
 
     *(jobs_q[queue_number])= *(jobs_q[queue_number])+1;
 
@@ -135,14 +161,17 @@ public:
       {
         std::unique_lock<std::mutex> lock(this->in_mutex);
 
+        // check if there is work to do, or there is not work to do now and in the future
         this->d_condition.wait(lock, [=]{ return ( std::any_of(jobs_q.begin(), jobs_q.end(), [](const int*data){return *data!=0;}) ||
                                                    ((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;})) && jobs_out==0) ); });
 
+        // if the queues are empty and there is not work out, terminate
         if((std::all_of(jobs_q.begin(), jobs_q.end(), [](const int *data){return *data==0;}))&& jobs_out==0){
             return EOS;
         }
 
-       // for (i = 0; i <= sieze_q; ++i){
+
+        //take the first jobs followind the priority
         for(const int &i : priority){
 
           //decrease the tooked jobs
@@ -160,8 +189,6 @@ public:
             return rc;
           }
         }
-
-
       }
     return (EOS);
   }
@@ -169,60 +196,67 @@ public:
 
 
 template <typename T>
+class queue{
+  private:
+    std::mutex              d_mutex;
+    std::condition_variable d_condition;
+    std::deque<T>           d_queue;
+    bool                    qend;
 
-class queue
-{
-private:
-  std::mutex              d_mutex;
-  std::condition_variable d_condition;
-  std::deque<T>           d_queue;
-  bool                    qend;
+  public:
 
-public:
+    queue(std::string s) { std::cout << "Created " << s << " queue " << std::endl;  }
+    queue():qend(false) {}
 
-  queue(std::string s) { std::cout << "Created " << s << " queue " << std::endl;  }
-  queue():qend(false) {}
+    void delete_work(){
 
-  void nomorewriters() {
-    qend = true;
-    this->d_condition.notify_all();
-    return;
-  }
-  void push(T const& value) {
-    {
-      std::unique_lock<std::mutex> lock(this->d_mutex);
-      d_queue.push_front(value);
+      for (; !d_queue.empty(); d_queue.pop_back())
+      {
+        auto& str = d_queue.back();
+        free( str);
+      }
     }
-    this->d_condition.notify_one();
-  }
-  
-  T pop() {
-    std::unique_lock<std::mutex> lock(this->d_mutex);
 
-    this->d_condition.wait(lock, [=]{ return !this->d_queue.empty(); });
-
-    T rc(std::move(this->d_queue.back()));
-    if (rc != NULL)
-      this->d_queue.pop_back();
+    void nomorewriters() {
+      qend = true;
+      this->d_condition.notify_all();
+      return;
+    }
+    void push(T const& value) {
+      {
+        std::unique_lock<std::mutex> lock(this->d_mutex);
+        d_queue.push_front(value);
+      }
+      this->d_condition.notify_one();
+    }
     
-    return rc;
-  }
+    T pop() {
+      std::unique_lock<std::mutex> lock(this->d_mutex);
 
-  std::optional<T> try_pop() {
-    std::unique_lock<std::mutex> lock(this->d_mutex);
-    if(d_queue.empty() && qend) {
-        return {};
-    } else {
-        this->d_condition.wait(lock, [=]{ return (!this->d_queue.empty()||qend); });
-        if(this->d_queue.empty()) {
-            return {};
-        } else {
-            T rc(std::move(this->d_queue.back()));
-            this->d_queue.pop_back();
-            return rc;
-        }
+      this->d_condition.wait(lock, [=]{ return !this->d_queue.empty(); });
+
+      T rc(std::move(this->d_queue.back()));
+      if (rc != NULL)
+        this->d_queue.pop_back();
+      
+      return rc;
     }
-  }
+
+    std::optional<T> try_pop() {
+      std::unique_lock<std::mutex> lock(this->d_mutex);
+      if(d_queue.empty() && qend) {
+          return {};
+      } else {
+          this->d_condition.wait(lock, [=]{ return (!this->d_queue.empty()||qend); });
+          if(this->d_queue.empty()) {
+              return {};
+          } else {
+              T rc(std::move(this->d_queue.back()));
+              this->d_queue.pop_back();
+              return rc;
+          }
+      }
+    }
 
 };
 

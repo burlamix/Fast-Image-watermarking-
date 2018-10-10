@@ -27,8 +27,14 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 	task* t;
 	while(true){
 
+  		#ifdef PRINTSTATUS
+			auto start_pop   = std::chrono::high_resolution_clock::now();
+		#endif
 		t = t_queue->pop();
-
+  		#ifdef PRINTSTATUS
+			auto elapsedx_pop = std::chrono::high_resolution_clock::now() - start_pop;
+			auto msecx_pop    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_pop).count();
+		#endif
 
 	  	if(t == EOS) {  
 	  		#ifdef PRINTSTATUS
@@ -37,7 +43,6 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 	  		return;                               
 	  	} 
 
-		//std::cout << "2*"<<t<<std::endl;
 
 		switch(t->get_type())
 			{
@@ -53,20 +58,28 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 
 				std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
 
-				//auto startx   = std::chrono::high_resolution_clock::now();
 
 				CImg<float>* loaded_img;
+				#ifdef PRINTSTATUS
+					auto start_real_t   = std::chrono::high_resolution_clock::now();
+				#endif
 				for (int i=0; i<10;i++){
 
 					try{
+						std::cout<<".----1----"<<std::endl;
 						loaded_img = new CImg<float>(name_img);
+						std::cout<<".----2----"<<std::endl;
+
 						break;
-					} catch (...) {
+					} catch (const std::exception& e) {
 						std::cout<<"CImg libary exception captured" <<std::endl;
 
 					}	
 				}
-
+		  		#ifdef PRINTSTATUS
+					auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+					auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+				#endif
 
 
 				free( t->get_name());
@@ -89,7 +102,8 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 		  		#ifdef PRINTSTATUS
 					auto elapsedx = std::chrono::high_resolution_clock::now() - start;
 					auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
-					std::cout<<std::this_thread::get_id()<<" load "<< msecx <<std::endl;
+					//std::cout<<std::this_thread::get_id()<<" load "<< msecx << "pop" << msecx_pop<<   std::endl;
+					std::cout<<" load "<< msecx << " pop " << msecx_pop<<  " rl "<<msecx_real_t<<  std::endl;
 				#endif
 
 			}break;
@@ -98,8 +112,14 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 					auto start   = std::chrono::high_resolution_clock::now();
 				#endif
 				
+		  		#ifdef PRINTSTATUS
+					auto start_real_t   = std::chrono::high_resolution_clock::now();
+				#endif
 				fuse_task_block( t );
-
+		  		#ifdef PRINTSTATUS
+					auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+					auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+				#endif
 				std::atomic<int> *block_to_do =	t->get_atom();
 
 				
@@ -116,7 +136,8 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 		  		#ifdef PRINTSTATUS
 					auto elapsedx = std::chrono::high_resolution_clock::now() - start;
 					auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
-					std::cout<<"				"<<std::this_thread::get_id()<<" mark "<< msecx <<std::endl;
+					//std::cout<<"				"<<std::this_thread::get_id()<<" mark "<< msecx << "pop" << msecx_pop<<   std::endl;
+					std::cout<<"				"<<" mark "<< msecx << " pop " << msecx_pop<<  " rl "<<msecx_real_t<<  std::endl;
 				#endif
 
 				}break;
@@ -131,12 +152,22 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 					strcpy(folder_n,folder_out);
 					strcat(folder_n,basename(t->get_name()));
 
+				#ifdef PRINTSTATUS
+					auto start_real_t   = std::chrono::high_resolution_clock::now();
+				#endif
 				for (int i=0; i<10;i++){
 					try{
-						t->get_img()->save(folder_n);
+
+							t->get_img()->save(folder_n);
+
+
 						break;
 					} catch (...) {	std::cout<<"CImg libary exception captured" <<std::endl;}	
 				}
+				#ifdef PRINTSTATUS
+					auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+					auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+				#endif
 
 				delete [] folder_n;
 				delete [] t->get_name();
@@ -147,11 +178,12 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 
 				if(t_queue->end())
 					t_queue->notify_all_j();  
-				
+
 		  		#ifdef PRINTSTATUS
 					auto elapsedx = std::chrono::high_resolution_clock::now() - start;
 					auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
-					std::cout<<"								"<<std::this_thread::get_id()<<" save "<< msecx <<std::endl;
+					//std::cout<<"								"<<std::this_thread::get_id()<<" save "<< msecx << "pop" << msecx_pop<<   std::endl;
+					std::cout<<"								"<<" save "<< msecx << " pop " << msecx_pop<<  " rl "<<msecx_real_t<<  std::endl;
 				#endif
 
 			}break;
@@ -193,7 +225,7 @@ int main(int argc, char * argv[]) {
 
 	for(auto& p: std::experimental::filesystem::directory_iterator(argv[1])){
 		task * t = new task(strdup( p.path().string().c_str()));
-		t_queue->push(t,2);
+		t_queue->push(t,0);
 	}
 
 
