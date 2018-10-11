@@ -49,24 +49,24 @@ public:
         jobs_q.push_back(new int(0));
       }
 
-      /*
+      
 
       for (int i =0;i<3;i++){
         switch(prior[i])      {
-          case "l": {
-              priority[0]=0;
+          case 'l': {
+              priority[i]=0;
 
           }break;
-          case "m": {
-              priority[0]=1;
+          case 'm': {
+              priority[i]=1;
             }break;
-          case "s": {
-              priority[0]=2;
+          case 's': {
+              priority[i]=2;
             }break;
             default:{std::cout << "something go wrong" << std::endl;}
           }
        }
-*/
+/*
       if(prior=="lms"){
         priority[0] = 0;
         priority[1] = 1;
@@ -92,7 +92,7 @@ public:
         priority[0] = 2;
         priority[1] = 0;
         priority[2] = 1;
-      }
+      }*/
 
   }
 

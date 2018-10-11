@@ -85,15 +85,18 @@ void fuse_task_block(task * t){
 
 //function for the serial version
 void fuse_img(CImg<float> * img ,CImg<float>* mark){
+  int np;
 
   for(int i=0; i<(*img)._height ; i++){
 
     for(int j=0; j<(*img)._width ; j++){
 
       if((*mark)(i,j) != 255){
-        (*img)(i,j,0,0) = 0;  
-        (*img)(i,j,0,1) = 0;  
-        (*img)(i,j,0,2) = 0;  
+        np= round((  (*img)(i,j,0,0)+(*img)(i,j,0,1)+(*img)(i,j,0,2)+85)  /6);
+
+        (*img)(i,j,0,0) = np;  
+        (*img)(i,j,0,1) = np;  
+        (*img)(i,j,0,2) = np;  
       }
     }
   }

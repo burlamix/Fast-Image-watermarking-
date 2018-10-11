@@ -66,14 +66,10 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 				for (int i=0; i<10;i++){
 
 					try{
-						std::cout<<".----1----"<<std::endl;
 						loaded_img = new CImg<float>(name_img);
-						std::cout<<".----2----"<<std::endl;
-
 						break;
-					} catch (const std::exception& e) {
-						std::cout<<"CImg libary exception captured" <<std::endl;
-
+					} catch (...) {
+						std::cout<<"CImg libary exception captured" << name_img<<std::endl;
 					}	
 				}
 		  		#ifdef PRINTSTATUS

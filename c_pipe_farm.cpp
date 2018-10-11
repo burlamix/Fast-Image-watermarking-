@@ -126,7 +126,7 @@ int main(int argc, char * argv[]) {
 
 
 	if(argc <6 ) {
-		std::cout << "Usage is: " << argv[0] << " input_folder mark_name output_folder split_degree  (fop or pof) (parallel_degree for all / parallel degree for each farm) " << std::endl;
+		std::cout << "Usage is: " << argv[0] << " input_folder mark_name output_folder split_degree (parallel_degree for all / parallel degree for each farm) (fop or pof or barrier) " << std::endl;
 		return(0);
 	}
 
@@ -136,25 +136,28 @@ int main(int argc, char * argv[]) {
 
 
   	// type of models
-	std::string pipe_of_farm = argv[5];
 
     CImg<float> *mark = new   CImg<float>(argv[2]);
 	int split_degree  = atoi(argv[4]);
 
+	std::string pipe_of_farm = argv[5];
 	int parallel_degree  = atoi(argv[6]);
 	int n_th_loader;
 	int n_th_marker;
 	int n_th_storer;
 
 	if(argc < 8){
+		pipe_of_farm = argv[6];
+		parallel_degree  = atoi(argv[5]);
 		n_th_loader= parallel_degree;
 		n_th_marker= parallel_degree;
 		n_th_storer= parallel_degree;
 
 	}else{
-		n_th_loader= atoi(argv[6]);
-		n_th_marker= atoi(argv[7]);
-		n_th_storer= atoi(argv[8]);		
+		pipe_of_farm = argv[8];
+		n_th_loader= atoi(argv[5]);
+		n_th_marker= atoi(argv[6]);
+		n_th_storer= atoi(argv[7]);		
 	}
 
 	char *	folder = strcat(argv[3],"/");

@@ -30,6 +30,7 @@ int main(int argc, char * argv[]) {
 		std::cout << "Usage is: " << argv[0] << " input_folder mark_name output_folder " << std::endl;
 		return(0);
 	}
+	
 	auto start_total   = std::chrono::high_resolution_clock::now();
 	
 
@@ -37,40 +38,52 @@ int main(int argc, char * argv[]) {
     CImg<float> *mark = new   CImg<float>(argv[2]);
     char * output_folder =strcat(argv[3],"/");
 	char * folder_n;
-	char * dir = argv[3];
+	char * dir = argv[1];
 	std::string file_name;
 
 	for(auto& file: fs::directory_iterator(dir)){
 
 		file_name = file.path().string();
 
+		#ifdef PRINTSTATUS
 		auto start_load   = std::chrono::high_resolution_clock::now();
+		#endif
 
 		img = new CImg<float>(file_name.c_str());
-
+		
+		#ifdef PRINTSTATUS
 		auto elapsed_load = std::chrono::high_resolution_clock::now() - start_load;
 		auto msec_load    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_load).count();
-
 		auto start_mark   = std::chrono::high_resolution_clock::now();
+		#endif
 
 		fuse_img(img,mark);
 
 
-
+		
+		#ifdef PRINTSTATUS
 		auto elapsed_mark = std::chrono::high_resolution_clock::now() - start_mark;
 		auto msec_mark    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_mark).count();
+		#endif
 
 
 	    folder_n = new char[strlen(output_folder)+strlen(file_name.c_str())]();
 	   	strcpy(folder_n,output_folder);
 	   	strcat(folder_n,basename(file_name.c_str()));
+
+		
+		#ifdef PRINTSTATUS
 		auto start_store  = std::chrono::high_resolution_clock::now();
+		#endif
 
 		img->save(folder_n );
 
-
+		
+		#ifdef PRINTSTATUS
 		auto elapsed_store = std::chrono::high_resolution_clock::now() - start_store;
 		auto msec_store    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_store).count();
+		#endif
+
 
     	//std::cerr<< "time to load "<<msec_load << " time to mark "<< msec_mark<< 
     			//" time to store "<<  msec_store<<std::endl;
