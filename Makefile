@@ -21,6 +21,8 @@ c_pipe_farm:
 c_pipe_farm_d:  clean
 	$(CXX) $(CXX_FLAGS)  c_pipe_farm.cpp -o c_pipe_farm $(LD_FLAGS) -lstdc++fs -g -fsanitize=address -Dcimg_display=0 -DDEBUG
 
+c_pipe_farm_p:  clean
+	$(CXX) $(CXX_FLAGS)  c_pipe_farm.cpp -o c_pipe_farm $(LD_FLAGS) -lstdc++fs -g -fsanitize=address -Dcimg_display=0 -DPRINTSTATUS
 
 pool_pq: 
 	$(CXX) $(CXX_FLAGS) $(FF_FOLD) pool_pq.cpp -o pool_pq $(LD_FLAGS) -lstdc++fs 
@@ -36,7 +38,8 @@ ff_pipe_farm:
 
 ff_pipe_farm_d: clean
 	$(CXX) $(CXX_FLAGS) $(FF_FOLD) ff_pipe_farm.cpp -o ff_pipe_farm $(LD_FLAGS) -lstdc++fs -g -fsanitize=address -Dcimg_display=0 -DDEBUG
-
+ff_pipe_farm_p: clean
+	$(CXX) $(CXX_FLAGS) $(FF_FOLD) ff_pipe_farm.cpp -o ff_pipe_farm $(LD_FLAGS) -lstdc++fs  -Dcimg_display=0 -DPRINTSTATUS
 clean:	
 	rm -f $(OBJS)
 

@@ -276,7 +276,7 @@ class task {
     int task_type;
 
     std::vector<std::pair<int,int>>* v; //needed to keep the pointer to free at the end
-
+    
   public:
 
     task(  char* img_n):  img_name(img_n),task_type(0) {}

@@ -33,11 +33,30 @@ void load_img(CImg<float> * img_mark,int split_degree ,queue<char *> *img_names,
 	  	  return;                               
 	  	} 
 
-	  	auto img_name = img_n.value();
+	  	char * img_name = img_n.value();
+
+		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
 
 	    std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
+		CImg<float>* loaded_img =new CImg<float>();
 
-		CImg<float>* loaded_img = new CImg<float>(img_name);
+  		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
+		for (int i=0; i<10;i++){
+			try{
+				loaded_img->load_jpeg(img_name);				
+				break;
+			} catch (...) {
+				std::cout<<"CImg libary exception captured" << img_name<<std::endl;
+			}	
+		}		  		
+		#ifdef PRINTSTATUS
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 
 		//array containing split range for each task
 		std::vector<std::pair<int,int>>* rf = my_split_n(img_mark,split_degree);
@@ -49,7 +68,11 @@ void load_img(CImg<float> * img_mark,int split_degree ,queue<char *> *img_names,
 			img_to_mark->push(t);
 
 		}
-
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<" load "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
 	}
 	return;
 }
@@ -65,12 +88,20 @@ void mark_img(queue<task *> *img_to_mark, queue<task *> *img_marked) {
                   
 	  	  return;                               
 	  	} 
-
+  		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
 	  	//task containing both the pointer to the image and the mark
 	  	auto t = tt.value();
 
+  		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
 	  	fuse_task_block( t );
-
+		#ifdef PRINTSTATUS
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 		std::atomic<int> *block_to_do =	t->get_atom();
 
 	  	// decrease the number of pices to computer for the image
@@ -83,7 +114,11 @@ void mark_img(queue<task *> *img_to_mark, queue<task *> *img_marked) {
 			delete  t;
 		}
 
-
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<"				 mark "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
 	}
 	return;
 }
@@ -100,14 +135,32 @@ void store(char * folder_out, queue<task *> *img_marked) {
 	  	  return;                               
 	  	} 
 	  	auto t = tt.value();
-
+  		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
 	    //merge the name of the image and the path of the output floder
 	    char * folder_n = new char[strlen(folder_out)+strlen(t->get_name())]();
 	   	strcpy(folder_n,folder_out);
 	   	strcat(folder_n,basename(t->get_name()));
 
-		t->get_img()->save(folder_n);
 
+  		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
+		for (int i=0; i<10;i++){
+
+			try{
+				t->get_img()->save_jpeg(folder_n);
+				break;
+			} catch (...) {
+				std::cout<<"CImg libary exception captured" << t->get_name()<<std::endl;
+			}	
+		}		  		
+		#ifdef PRINTSTATUS
+
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 		delete [] folder_n;
 
 		free( t->get_name());
@@ -115,6 +168,11 @@ void store(char * folder_out, queue<task *> *img_marked) {
 		delete  t->get_atom();
 		delete  t;
 
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<" 								store "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
 	}
 
 	return;
@@ -184,18 +242,45 @@ int main(int argc, char * argv[]) {
 	  	// create farms of threads for each stage
 
 	    th_load.reserve (n_th_loader); // Reserve memory not to allocate 
-	    for (int i = 0; i < n_th_loader; ++i)
+	    for (int i = 0; i < n_th_loader; ++i){
 	    	th_load.push_back(std::thread(load_img,mark,split_degree,img_names,img_to_mark));
+		    cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i, &cpuset);
+			int rc = pthread_setaffinity_np(th_load[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
+			if (rc != 0) {
+				std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+			}
+	    }
 	    
 
 	    th_mark.reserve (n_th_marker);
-	    for (int i = 0; i < n_th_marker; ++i)
+	    for (int i = 0; i < n_th_marker; ++i){
 	    	th_mark.push_back(std::thread(mark_img,img_to_mark,img_marked));
+		    cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i+n_th_loader, &cpuset);
+			int rc = pthread_setaffinity_np(th_mark[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
+			if (rc != 0) {
+				std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+			}	    
+		}
 	    
 
 	    th_store.reserve (n_th_storer);
-	    for (int i = 0; i < n_th_storer; ++i)
+	    for (int i = 0; i < n_th_storer; ++i){
 	    	th_store.push_back(std::thread(store,folder,img_marked));
+		    cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i+n_th_loader+n_th_marker, &cpuset);
+			int rc = pthread_setaffinity_np(th_store[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
+			if (rc != 0) {
+				std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+			}		    
+		}
 
 
 	    //wait that all loader end
@@ -219,7 +304,7 @@ int main(int argc, char * argv[]) {
 		auto elapsed = std::chrono::high_resolution_clock::now() - start;
   		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
+		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	}else if(pipe_of_farm =="fop"){
 
@@ -241,10 +326,25 @@ int main(int argc, char * argv[]) {
 
 		//create vector of pipeline using the previus queue to connect each different pipeline
 	    for (int i = 0; i < parallel_degree; ++i){
+	    	cpu_set_t cpuset;
 
 	    	th_load.push_back(std::thread(load_img,mark,split_degree,img_names,img_to_mark[i]));
+	    	CPU_ZERO(&cpuset);
+			CPU_SET((i*3)+1, &cpuset);
+			int rc1 = pthread_setaffinity_np(th_store[i].native_handle(), sizeof(cpu_set_t), &cpuset);
 	    	th_mark.push_back(std::thread(mark_img,img_to_mark[i],img_marked[i]));
+	    	CPU_ZERO(&cpuset);
+			CPU_SET((i*3)+2, &cpuset);
+			int rc2 = pthread_setaffinity_np(th_store[i].native_handle(), sizeof(cpu_set_t), &cpuset);
 	    	th_store.push_back(std::thread(store,folder,img_marked[i]));
+	    	CPU_ZERO(&cpuset);
+			CPU_SET((i*3)+3, &cpuset);
+			int rc3 = pthread_setaffinity_np(th_store[i].native_handle(), sizeof(cpu_set_t), &cpuset);
+
+
+			if (rc1 != 0 ||rc2 != 0  || rc3 != 0 ) {
+				std::cerr << "Error calling pthread_setaffinity_np: " << rc1 << rc2<< rc3 << "\n";
+			}	
 	    }
 
 		img_names->nomorewriters();
@@ -275,7 +375,7 @@ int main(int argc, char * argv[]) {
 		auto elapsed = std::chrono::high_resolution_clock::now() - start;
   		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
+		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	}else if(pipe_of_farm =="barrier"){
 
@@ -294,8 +394,14 @@ int main(int argc, char * argv[]) {
 
 	  	// create threads load_img
 	    th_load.reserve (parallel_degree); // Reserve memory not to allocate 
-	    for (int i = 0; i < parallel_degree; ++i)
+	    for (int i = 0; i < parallel_degree; ++i){
 	    	th_load.push_back(std::thread(load_img,mark,split_degree,img_names,img_to_mark));
+	    	cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i, &cpuset);
+			int rc = pthread_setaffinity_np(th_load[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
+		}
 	    //wait threads load_img
 	    for(auto &th : th_load)
 			th.join();
@@ -311,8 +417,14 @@ int main(int argc, char * argv[]) {
 
 	  	// create threads mark_img
 	    th_mark.reserve (parallel_degree); // Reserve memory not to allocate 
-	    for (int i = 0; i < parallel_degree; ++i)
+	    for (int i = 0; i < parallel_degree; ++i){
 	    	th_mark.push_back(std::thread(mark_img,img_to_mark,img_marked));
+	    	cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i+parallel_degree, &cpuset);
+			int rc = pthread_setaffinity_np(th_mark[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
+	    }
 
 	    //wait threads mark_img
 		for(auto &th :th_mark)
@@ -330,8 +442,14 @@ int main(int argc, char * argv[]) {
 
 	  	// create threads store
 	    th_store.reserve (parallel_degree); // Reserve memory not to allocate 
-	    for (int i = 0; i < parallel_degree; ++i)
+	    for (int i = 0; i < parallel_degree; ++i){
+	    	cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			CPU_SET(i+parallel_degree+parallel_degree, &cpuset);
+			int rc = pthread_setaffinity_np(th_store[i].native_handle(),
+			                        sizeof(cpu_set_t), &cpuset);
 	    	th_store.push_back(std::thread(store,folder,img_marked));
+	    }
 
 	    //wait threads mark_img
 		for(auto &th : th_store)

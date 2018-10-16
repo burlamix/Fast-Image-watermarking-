@@ -7,21 +7,26 @@ to_print5 = np.loadtxt('pool_msl.txt')
 to_print6 = np.loadtxt('pool_sml.txt') 
 
 
-#speed up
-to_print1 = np.loadtxt('s_c_123.txt') 
-to_print2 = np.loadtxt('s_ff_123.txt') 
-to_print3 = np.loadtxt('s_pool_123.txt') 
+
+
+
 
 #efficiency
 to_print1 = np.loadtxt('e_c.txt') 
 to_print2 = np.loadtxt('e_ff.txt') 
 to_print3 = np.loadtxt('e_pool.txt') 
 
+
+#speed up
+to_print1 = np.loadtxt('s_c_123.txt') 
+to_print2 = np.loadtxt('s_ff_123.txt') 
+to_print3 = np.loadtxt('s_pool_123.txt') 
+
+
 #time
 to_print1 = np.loadtxt('c_pof_123.txt') 
 to_print2 = np.loadtxt('f_pof_123.txt') 
 to_print3 = np.loadtxt('pool_123.txt') 
-
 
 
 axe1 = np.loadtxt('axes123.txt') 

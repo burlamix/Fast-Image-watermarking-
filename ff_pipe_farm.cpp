@@ -45,22 +45,48 @@ struct load_node: ff_node_t<char ,task  > {
 	load_node( CImg<float> * mark, int split_d): img_mark(mark) ,split_degree (split_d){} 
 
 	task *svc(char *img_name) {
+		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
+		CImg<float>* loaded_img =new CImg<float>();
 
-	CImg<float> *loaded_img = new CImg<float>(img_name);
-    std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
 
-	//array containing split range for each task
-	std::vector<std::pair<int,int>>* rf = my_split_n(img_mark,split_degree);
 
-	//creating each task and add to the queue
-	for(int i=0;i<split_degree;i++){
+		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
+		for (int i=0; i<10;i++){
+			try{
+				loaded_img->load_jpeg(img_name);				
+				break;
+			} catch (...) {
+				std::cout<<"CImg libary exception captured" << loaded_img<<std::endl;
+			}	
+		}
+		#ifdef PRINTSTATUS
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 
-		task * t = new task(loaded_img,img_mark,img_name,&rf[0][i].first,&rf[0][i].second,block_to_do,rf);
-		ff_send_out(t);
+	    std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
+
+		//array containing split range for each task
+		std::vector<std::pair<int,int>>* rf = my_split_n(img_mark,split_degree);
+
+		//creating each task and add to the queue
+		for(int i=0;i<split_degree;i++){
+
+			task * t = new task(loaded_img,img_mark,img_name,&rf[0][i].first,&rf[0][i].second,block_to_do,rf);
+			ff_send_out(t);
+		}
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<" load "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
+		return GO_ON;
 	}
-
-	return GO_ON;
-}};
+};
 
 
 
@@ -69,22 +95,40 @@ struct mark_node: ff_node_t<task,task> {
 
 	task *svc(task *t) {
 
+  		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
 		std::atomic<int> *block_to_do =	t->get_atom();
-
+  		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
 	  	//task containing both the pointer to the image and the mark
 	    fuse_task_block( t );
-
+		#ifdef PRINTSTATUS
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 	  	// decrease the number of pices to computer for the image
 		// if is 0 means that all the image was computed so it can be stored in memory
 		if( --(*block_to_do) == 0) {
 			delete t->get_v();
+			#ifdef PRINTSTATUS
+			auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+			auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+			std::cout<<"				 mark "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+			#endif
 			return t;
 		}else {
 			delete  t;
 		}
-
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<"				 mark "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
 	return GO_ON;
-}};
+	}
+};
 
 struct store_node: ff_node_t<task,int> {
 
@@ -93,13 +137,29 @@ struct store_node: ff_node_t<task,int> {
 	store_node( char* folder_o): folder_out(folder_o) {} 
 
 	int *svc(task* t) {
-
+  		#ifdef PRINTSTATUS
+			auto start   = std::chrono::high_resolution_clock::now();
+		#endif
 	    //merge the name of the image and the path of the output floder
 	    char * folder_n = new char[strlen(folder_out)+strlen(t->get_name())]();
 	   	strcpy(folder_n,folder_out);
 	   	strcat(folder_n,basename(t->get_name()));
+  		#ifdef PRINTSTATUS
+			auto start_real_t   = std::chrono::high_resolution_clock::now();
+		#endif
+		for (int i=0; i<10;i++){
 
-		t->get_img()->save(folder_n);
+			try{
+				t->get_img()->save_jpeg(folder_n);
+				break;
+			} catch (...) {
+				std::cout<<"CImg libary exception captured" << t->get_img()<<std::endl;
+			}	
+		}
+		#ifdef PRINTSTATUS
+		auto elapsedx_real_t = std::chrono::high_resolution_clock::now() - start_real_t;
+		auto msecx_real_t    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx_real_t).count();
+		#endif
 
 		delete [] folder_n;
 
@@ -107,7 +167,11 @@ struct store_node: ff_node_t<task,int> {
 		delete t->get_img();
 		delete  t->get_atom();
 		delete  t;
-
+		#ifdef PRINTSTATUS
+		auto elapsedx = std::chrono::high_resolution_clock::now() - start;
+		auto msecx    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedx).count();
+		std::cout<<" 								store "<< msecx <<  " rl "<<msecx_real_t<<  std::endl;
+		#endif
 	return GO_ON;
 }};
 
@@ -195,7 +259,7 @@ int main(int argc, char * argv[]) {
 	auto elapsed = std::chrono::high_resolution_clock::now() - start;
 	auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-	std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
+	std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	return 0;
 }

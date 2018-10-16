@@ -10,13 +10,15 @@ do
 
 	    a=$((i/3))
 
-	    ./ff_pipe_farm data_254 mark.png output 1 $a pof
+	    ./ff_pipe_farm data_254 mark.png output 1 $a $1
 
 		if [ $i -gt 60 ]
 		then
 			i=$i+6
 		fi
-	done
+	done	
+
+	
 
 	echo
 done

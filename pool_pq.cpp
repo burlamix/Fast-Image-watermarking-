@@ -59,14 +59,14 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 				std::atomic<int> *block_to_do = new std::atomic<int>(split_degree);
 
 
-				CImg<float>* loaded_img;
+				CImg<float>* loaded_img =new CImg<float>();
 				#ifdef PRINTSTATUS
 					auto start_real_t   = std::chrono::high_resolution_clock::now();
 				#endif
 				for (int i=0; i<10;i++){
 
 					try{
-						loaded_img = new CImg<float>(name_img);
+						loaded_img->load_jpeg(name_img);				
 						break;
 					} catch (...) {
 						std::cout<<"CImg libary exception captured" << name_img<<std::endl;
@@ -154,7 +154,7 @@ void worker_t(char * folder_out,int split_degree, CImg<float> * img_mark, tri_qu
 				for (int i=0; i<10;i++){
 					try{
 
-							t->get_img()->save(folder_n);
+							t->get_img()->save_jpeg(folder_n);
 
 
 						break;
@@ -230,8 +230,17 @@ int main(int argc, char * argv[]) {
 
 
     th_worker.reserve (parallel_degree); // Reserve memory not to allocate 
-    for (int i = 0; i < parallel_degree; ++i)
+    for (int i = 0; i < parallel_degree; ++i) {
     	th_worker.push_back(std::thread(worker_t,folder,split_degree,mark,t_queue));
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		CPU_SET(i, &cpuset);
+		int rc = pthread_setaffinity_np(th_worker[i].native_handle(),
+		                        sizeof(cpu_set_t), &cpuset);
+		if (rc != 0) {
+			std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+		}
+    }
 
 
 
