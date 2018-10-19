@@ -11,7 +11,7 @@ do
 
 	    a=$((i/3))
 
-	    ./pool_pq data_254 mark.png output 1 $i $1
+	    ./pool_pq data_512 mark.png output 1 $i $1
 	    #echo $i
 
 	    #echo ------ $a

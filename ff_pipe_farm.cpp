@@ -260,6 +260,9 @@ int main(int argc, char * argv[]) {
 	auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
 	std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
+	std::ofstream outfile;
+	outfile.open(get_date("ff_"), std::ios_base::app);
+	outfile << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	return 0;
 }

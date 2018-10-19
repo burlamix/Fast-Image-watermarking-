@@ -11,6 +11,7 @@
 #include <numeric>
 #include <atomic> 
 #include <experimental/filesystem>
+#include <fstream>
 
 #include "data_struct.cpp"
 
@@ -257,10 +258,12 @@ int main(int argc, char * argv[]) {
 	auto elapsed = std::chrono::high_resolution_clock::now() - start;
 	auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-	std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
+	std::cout << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
 
-
-
+	std::ofstream outfile;
+	std::string a =get_date("pool_");
+	outfile.open(a, std::ios_base::app);
+	outfile << "Total time " << msec << " msecs. "<< split_degree<<" split "<<parallel_degree<< " thread " << std::endl;
 
 
 

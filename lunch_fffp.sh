@@ -10,7 +10,7 @@ do
 
 	    a=$((i/3))
 
-	    ./ff_pipe_farm data_254 mark.png output 1 $a $1
+	    ./ff_pipe_farm data_512 mark.png output 1 $a $1
 
 		if [ $i -gt 60 ]
 		then

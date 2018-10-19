@@ -1,0 +1,9 @@
+Total time 330 msecs. 1 split 1 thread 
+Total time 341 msecs. 1 split 1 thread 
+Total time 330 msecs. 1 split 1 thread 
+Total time 331 msecs. 1 split 1 thread 
+Total time 337 msecs. 1 split 1 thread 
+Total time 323 msecs. 1 split 1 thread 
+Total time 326 msecs. 1 split 1 thread 
+Total time 328 msecs. 1 split 1 thread 
+Total time 330 msecs. 1 split 1 thread 

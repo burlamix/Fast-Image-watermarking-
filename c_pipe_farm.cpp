@@ -305,6 +305,9 @@ int main(int argc, char * argv[]) {
   		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
 		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
+		std::ofstream outfile;
+		outfile.open(get_date("c_"), std::ios_base::app);
+		outfile << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	}else if(pipe_of_farm =="fop"){
 
@@ -375,7 +378,10 @@ int main(int argc, char * argv[]) {
 		auto elapsed = std::chrono::high_resolution_clock::now() - start;
   		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-		std::cerr << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
+		std::cout << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
+		std::ofstream outfile;
+		outfile.open(get_date("c_"), std::ios_base::app);
+		outfile << "Total time " << msec << " msecs. "<< split_degree<<" split "<<(parallel_degree *3)<< " thread " << std::endl;
 
 	}else if(pipe_of_farm =="barrier"){
 
@@ -461,12 +467,17 @@ int main(int argc, char * argv[]) {
 		auto elapsed = std::chrono::high_resolution_clock::now() - start;
   		auto msec    = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-    	std::cerr<<"total "<< msec << " load "<<msec_load_img << " mark "<< msec_mark_img<< 
+    	std::cout<<"total "<< msec << " load "<<msec_load_img << " mark "<< msec_mark_img<< 
+    			" store "<<  msec_store << split_degree<<" split "<<" with "<<parallel_degree<< " th"<<std::endl;
+	std::ofstream outfile;
+
+	outfile.open(get_date("c_"), std::ios_base::app);
+	outfile <<"total "<< msec << " load "<<msec_load_img << " mark "<< msec_mark_img<< 
     			" store "<<  msec_store << split_degree<<" split "<<" with "<<parallel_degree<< " th"<<std::endl;
 
 
 	}else{
-		std::cerr << "select the type of model between pof, fop, barrier" << std::endl;
+		std::cout << "select the type of model between pof, fop, barrier" << std::endl;
 	}
 	delete mark;
 

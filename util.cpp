@@ -1,5 +1,6 @@
 #include "../CImg/CImg.h"
-
+#include <iostream>
+#include <ctime>
 using namespace cimg_library;
 
 bool split_direction = false  ;     //true = in row , false =  in colum
@@ -39,6 +40,20 @@ std::vector<std::pair<int,int>> *my_split_n(CImg<float> * img, int split_degree)
 
 }
 
+std::string get_date(std::string a){
+
+  time_t rawtime;
+  struct tm * timeinfo;
+  char buffer[80];
+
+  time (&rawtime);
+  timeinfo = localtime(&rawtime);
+
+  strftime(buffer,sizeof(buffer),"%d-%m-%Y_%H:%M:%S",timeinfo);
+  std::string str(buffer);
+
+  std::cout << a+str;
+}
 
 
 
